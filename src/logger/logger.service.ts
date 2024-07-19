@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { EventEmitter } from 'events';
 import { fromEvent } from 'rxjs';
 import { Tail } from 'tail';
 import { SessionType } from './logger.type';
 
 const EventName = 'rxtx';
-function generateEventName(id) {
+function generateEventName(id: string) {
   return `${EventName}.${id}`;
 }
 
@@ -34,17 +34,21 @@ export class LoggerService {
     fileName: string;
     countLast: number;
   }) {
-    this.sessionList[id] = {
-      fileName,
-      streamCtx: new Tail(fileName, {
-        fromBeginning: false,
-        nLines: countLast,
-        follow: true,
-      }),
-    };
+    try {
+      this.sessionList[id] = {
+        fileName,
+        streamCtx: new Tail(fileName, {
+          fromBeginning: false,
+          nLines: countLast,
+          follow: true,
+        }),
+      };
+    } catch (e) {
+      throw new HttpException('File open error', HttpStatus.BAD_REQUEST);
+    }
 
     this.sessionList[id].streamCtx.on('line', (data: string) => {
-      console.log(data.toString());
+      //console.log(data.toString());
       this.send(data, id);
     });
     this.sessionList[id].streamCtx.on('error', () => {
@@ -56,6 +60,7 @@ export class LoggerService {
   }
   async remove(id: string) {
     console.log('detach', id);
+    if (!this.sessionList[id] || !this.sessionList[id].streamCtx) return;
     this.sessionList[id].streamCtx.unwatch();
     delete this.sessionList[id];
   }
