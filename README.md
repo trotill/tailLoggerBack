@@ -15,16 +15,11 @@ $ yarn install
 ## Running the app
 
 ```bash
-# development
 $ yarn start
-
-# watch mode
-$ yarn start:dev
-
-# production mode
-$ yarn start:prod
 ```
 open URL http://localhost:6200
+
+swagger api/docs http://localhost:6200/api/docs 
 ## Support
 
 monkeyhouse@mail.ru

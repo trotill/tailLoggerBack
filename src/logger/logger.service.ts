@@ -1,8 +1,13 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { EventEmitter } from 'events';
-import { fromEvent } from 'rxjs';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  type MessageEvent,
+} from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { fromEvent, Observable } from 'rxjs';
 import { Tail } from 'tail';
-import { SessionType } from './logger.type';
+import type { SessionType } from './logger.type';
 
 const EventName = 'rxtx';
 function generateEventName(id: string) {
@@ -11,13 +16,10 @@ function generateEventName(id: string) {
 
 @Injectable()
 export class LoggerService {
-  emitter: EventEmitter;
   sessionList: SessionType = {};
-  constructor() {
-    this.emitter = new EventEmitter();
-  }
+  constructor(private eventEmitter: EventEmitter2) {}
   send(message: string, sessionId: string) {
-    this.emitter.emit(generateEventName(sessionId), {
+    this.eventEmitter.emit(generateEventName(sessionId), {
       type: sessionId,
       data: {
         msg: message,
@@ -25,7 +27,7 @@ export class LoggerService {
       },
     });
   }
-  async subscribe({
+  subscribe({
     id,
     fileName,
     countLast,
@@ -33,7 +35,7 @@ export class LoggerService {
     id: string;
     fileName: string;
     countLast: number;
-  }) {
+  }): Observable<MessageEvent> {
     try {
       this.sessionList[id] = {
         fileName,
@@ -56,9 +58,9 @@ export class LoggerService {
       this.remove(id);
     });
     console.log('attach', id);
-    return fromEvent(this.emitter, generateEventName(id));
+    return fromEvent<MessageEvent>(this.eventEmitter, generateEventName(id));
   }
-  async remove(id: string) {
+  async remove(id: string): Promise<void> {
     console.log('detach', id);
     if (!this.sessionList[id] || !this.sessionList[id].streamCtx) return;
     this.sessionList[id].streamCtx.unwatch();
